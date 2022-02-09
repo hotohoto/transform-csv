@@ -195,7 +195,10 @@ def positive_int(n):
 
 
 def transform(
-    df: pd.DataFrame, fields_setting: FieldsSetting, n_lags: int
+    df: pd.DataFrame,
+    fields_setting: FieldsSetting,
+    n_lags: int,
+    gap: int,
 ) -> pd.DataFrame:
     _fields_to_window = set(fields_setting.fields_to_window)
     _fields_to_drop = set(fields_setting.fields_to_drop)
@@ -205,9 +208,27 @@ def transform(
     for f in fields_setting.all_fields:
         if f in _fields_to_window:
             for i in range(n_lags):
-                new_field = f"{f}_T-{i}"
-                df_new[new_field] = pd.Series([None] * i, dtype=str).append(
-                    df[f][: len(df) - i], ignore_index=True
+                t = i - n_lags + 1
+                t_ = -t
+                assert t <= 0
+                new_field = f"{f}_T-{t_}"
+                df_new[new_field] = pd.concat(
+                    [
+                        pd.Series([None] * t_, dtype=str),
+                        df[f][: len(df) - t_],
+                    ],
+                    ignore_index=True,
+                )
+            for i in range(gap):
+                t = i + 1
+                assert t > 0
+                new_field = f"{f}_T+{t}"
+                df_new[new_field] = pd.concat(
+                    [
+                        pd.Series([None] * i, dtype=str),
+                        df[f][t : len(df) - t],
+                    ],
+                    ignore_index=True,
                 )
         elif f in _fields_to_drop:
             continue
@@ -230,12 +251,20 @@ def main():
         type=path_with_suffix(".csv"),
     )
 
-    # TODO make this configurable using user inputs at runtime
+    # TODO make these configurable using user inputs at runtime
     parser.add_argument(
         "n_lags",
         help="number of observed inputs required.",
         type=positive_int,
         default=1,
+        nargs="?",
+    )
+
+    parser.add_argument(
+        "gap",
+        help="number of time points of the gap after the last observation before the first prediction.",
+        type=positive_int,
+        default=0,
         nargs="?",
     )
 
@@ -253,7 +282,7 @@ def main():
         configure_fields_settings_interactively, fields_setting
     )
     save_fields_setting(args.input_file_path, fields_setting)
-    df_new = transform(df, fields_setting, args.n_lags)
+    df_new = transform(df, fields_setting, args.n_lags, args.gap)
     df_new.to_csv(args.output_file_path, index=False)
 
 
