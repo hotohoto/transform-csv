@@ -1,6 +1,6 @@
 # transform-csv
 
-A python script to transform a CSV file.
+An interactive python script to transform a timeseries CSV file into the java-predfun format.
 
 ## Usage
 

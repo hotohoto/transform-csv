@@ -239,7 +239,8 @@ def transform(
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="An interactive script to transform a timeseries CSV file into the java-predfun format.")
+
     parser.add_argument(
         "input_file_path",
         help="path to the input CSV file",
